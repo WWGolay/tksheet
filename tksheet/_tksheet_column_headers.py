@@ -989,7 +989,18 @@ class ColumnHeaders(tk.Canvas):
                                 int(c),
                             )
                         )
-                    self.parentframe.emit_event("<<SheetModified>>")
+                    moved_cols = [(start, end) for start, end in zip(orig_selected, new_selected) if start != end]
+                    modified_cols=list(range(min(list(orig_selected)+list(new_selected)), max(list(orig_selected)+list(new_selected))+1))
+                    direction = -1 if c < rm1start else 1
+                    displacement = -direction * totalcols
+                    displaced_cols = [(start, start+displacement) for start in modified_cols if start not in orig_selected]
+                    moved_cols += displaced_cols
+                    event_data = sheet_modified_event_data(
+                        action="move_cols",
+                        modified_cols=modified_cols,
+                        moved_cols=moved_cols,
+                    )
+                    self.parentframe.emit_event("<<SheetModified>>", event_data)
         elif (
             self.b1_pressed_loc is not None
             and self.rsz_w is None
@@ -2323,7 +2334,11 @@ class ColumnHeaders(tk.Canvas):
             self.set_col_width_run_binding(c)
         if redraw:
             self.MT.refresh()
-        self.parentframe.emit_event("<<SheetModified>>")
+        event_data = sheet_modified_event_data(
+            action="edit_header",
+            modified_cols=[datacn],
+        )
+        self.parentframe.emit_event("<<SheetModified>>", event_data)
 
     def set_cell_data(self, datacn=None, value=""):
         if isinstance(self.MT._headers, int):

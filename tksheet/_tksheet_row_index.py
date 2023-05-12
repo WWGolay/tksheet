@@ -929,7 +929,18 @@ class RowIndex(tk.Canvas):
                                 int(r),
                             )
                         )
-                    self.parentframe.emit_event("<<SheetModified>>")
+                    moved_rows = [(start, end) for start, end in zip(orig_selected, new_selected) if start != end]
+                    modified_rows = list(range(min(list(orig_selected)+list(new_selected)), max(list(orig_selected)+list(new_selected))+1))
+                    direction = -1 if r < rm1start else 1
+                    displacement = -direction * totalrows
+                    displaced_rows = [(start, start+displacement) for start in modified_rows if start not in orig_selected]
+                    moved_rows += displaced_rows
+                    event_data = sheet_modified_event_data(
+                        action="move_rows",
+                        modified_rows=modified_rows,
+                        moved_rows=moved_rows,
+                    )
+                    self.parentframe.emit_event("<<SheetModified>>", event_data)
         elif (
             self.b1_pressed_loc is not None
             and self.rsz_w is None
@@ -2226,7 +2237,11 @@ class RowIndex(tk.Canvas):
             self.set_row_height_run_binding(r, only_set_if_too_small=False)
         if redraw:
             self.MT.refresh()
-        self.parentframe.emit_event("<<SheetModified>>")
+        event_data = sheet_modified_event_data(
+            action="edit_index",
+            row=[datarn],
+        )
+        self.parentframe.emit_event("<<SheetModified>>", event_data)
 
     def set_cell_data(self, datarn=None, value=""):
         if isinstance(self.MT._row_index, int):
